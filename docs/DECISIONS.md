@@ -168,3 +168,42 @@ without gaining meaningful result diversity.
 
 **When to revisit:** If the diversity constraint proves insufficient and
 duplicate results remain a quality problem after Phase 3 affinity updates.
+
+
+---
+
+## Models Pinned Locally, Not Downloaded at Runtime
+
+**Decision:** Both model weight directories are validated in the opensearch-models
+workbench and saved to opensearch/models/. The model service loads from disk at
+startup. No HuggingFace calls at runtime.
+
+**Why:** Downloading from HuggingFace at container startup means production runs
+a model that was never tested. HuggingFace can update weights silently — the
+model you tested in the workbench is not guaranteed to be the model that starts
+in production tomorrow. Pinning locally means what we tested is exactly what runs.
+It also removes HuggingFace as a runtime dependency — the model service starts
+with no external network calls required.
+
+**When to revisit:** When model weights need to be updated. The process is always
+the same — validate in the workbench, pin the new weights, copy to models/,
+restart the model service container. Never update weights without workbench
+validation first.
+
+---
+
+## Pure gRPC for Model Service, No FastAPI
+
+**Decision:** The model service is a pure Python gRPC server. No FastAPI, no
+HTTP layer, no REST endpoints.
+
+**Why:** The only callers of the model service are internal Go modules — the
+classifier client and the crawler client. Both call over gRPC. Adding an HTTP
+layer adds serialization overhead, an additional dependency, and an interface
+that nothing uses. gRPC gives us binary encoding, contract enforcement via proto,
+and generated client code in Go. FastAPI would be the right choice if humans or
+external services needed to call the model service directly — they do not.
+
+**When to revisit:** If a debugging or monitoring use case requires human-readable
+HTTP access to the model service. At that point add a reflection endpoint or a
+separate lightweight debug handler — do not redesign the service boundary.

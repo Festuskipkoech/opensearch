@@ -45,26 +45,45 @@ SearXNG is an existing Python application whose HTTP interface we cannot change.
 
 ## The Model Service
 
-A separate Python service exposing two gRPC endpoints. One service, two models
-loaded into memory at startup.
+A separate Python gRPC service. No FastAPI, no HTTP — pure gRPC server.
+Two models load from disk at startup and stay loaded for the server lifetime.
+No HuggingFace calls at runtime. No external network calls after startup.
 
 ```
-POST /classify    distilbert-base-uncased fine-tuned on our query dataset
-                  input: query string
-                  output: intent class + confidence score
+rpc Classify   distilbert-base-uncased fine-tuned on our query dataset
+               input:  query string
+               output: intent class + confidence score 0.0 to 1.0
 
-POST /relevance   cross-encoder/ms-marco-MiniLM-L6-v2
-                  input: query string + snippet string
-                  output: relevance score 0.0 to 1.0
+rpc Relevance  cross-encoder/ms-marco-MiniLM-L6-v2 pinned from workbench
+               input:  query string + snippet string
+               output: relevance score 0.0 to 1.0
+                       sigmoid normalisation applied internally before returning
+                       the Go crawler module always receives a 0-1 value
 ```
 
-Model weights live in opensearch/models/. The fine-tuned distilbert weights
-come from the opensearch-models workbench project. The cross-encoder weights
-download from HuggingFace at container startup.
+Both model weight directories come from the opensearch-models workbench.
+Neither model downloads anything at container startup.
 
-The model service is a separate project from the fine-tuning workbench.
-opensearch-models handles all dirty experimentation and exports final weights.
-opensearch wraps those weights in a production gRPC service.
+```
+opensearch/models/classifier/   fine-tuned distilbert — ~253MB
+opensearch/models/relevance/    pinned cross-encoder  — 91MB
+```
+
+### Model Service Structure
+
+```
+model_service/
+├── service.py          gRPC server entry point, loads both models at startup
+├── classifier.py       distilbert inference — returns intent class + confidence
+├── relevance.py        cross-encoder inference — applies sigmoid, returns 0-1 score
+├── Dockerfile
+└── requirements.txt
+```
+
+`service.py` initialises both models before the gRPC server binds to its port.
+If either model fails to load from disk the service exits — it does not start
+in a degraded state. The Go engine health check will detect the failure and
+the server will not accept traffic until the model service is healthy.
 
 ---
 
@@ -80,8 +99,8 @@ router, searxng, merger, crawler, and cache in sequence. Thin — coordinates,
 does not compute.
 
 **classifier**
-gRPC client to the model service /classify endpoint. Returns intent class,
-confidence, and flags uncertainty when confidence is below threshold.
+gRPC client to the model service rpc Classify. Returns intent class, confidence,
+and flags uncertainty when confidence is below threshold.
 Knows nothing about engines or crawling.
 
 **router**
@@ -98,8 +117,10 @@ Receives multiple result lists from parallel engine queries. Returns one
 deduplicated reranked list. Knows nothing about where results came from.
 
 **crawler**
-gRPC client to the model service /relevance endpoint for sufficiency scoring.
+gRPC client to the model service rpc Relevance for sufficiency scoring.
 gRPC client to Spider-rs for content extraction. Returns enriched results.
+Receives relevance scores already normalised to 0-1 — applies sufficiency
+formula directly without any sigmoid conversion.
 
 **cache**
 Receives a cache key and a typed result. Stores and retrieves from Redis.
@@ -115,19 +136,31 @@ directly except this package.
 ## Routing — Affinity Matrix
 
 Routing is not a lookup table. Each engine has a base affinity score per intent
-class — a floating point number representing how well that engine historically
-performs for that intent. These scores start as expert-seeded values and update
-from real query outcomes over time using an exponential moving average.
+class representing how well that engine historically performs for that intent.
+Scores are seeded in broad honest tiers grounded in publicly available engine
+quality research. Precise calibration comes from real traffic via EMA update.
 
 ```
               brave   ddg    bing   mojeek  yandex
-news           0.90   0.60   0.72   0.40    0.65
-code           0.75   0.85   0.80   0.35    0.20
-factual        0.65   0.90   0.60   0.50    0.40
-research       0.85   0.55   0.70   0.80    0.30
-commercial     0.70   0.60   0.85   0.30    0.25
-general        0.80   0.75   0.65   0.75    0.55
+news           0.80   0.60   0.80   0.30    0.60
+code           0.80   0.80   0.80   0.30    0.20
+factual        0.60   0.80   0.60   0.60    0.30
+research       0.80   0.60   0.60   0.60    0.30
+commercial     0.60   0.60   0.80   0.30    0.30
+general        0.80   0.80   0.60   0.60    0.60
 ```
+
+Tier basis:
+- brave    independent index, high quality, high blocking tolerance
+- ddg      Bing-proxied, reliable, low-JS endpoints, high blocking tolerance
+- bing     independent index, strong commercial and code coverage
+- mojeek   independent index, solid general queries, very high blocking tolerance
+- yandex   strong non-English and local queries, weak English technical content
+
+Google is excluded from Phase 1 and 2. It blocks SearXNG instances aggressively
+via TLS fingerprinting — a fresh instance gets blocked after 5 requests. It
+enters the engine pool in Phase 3 behind TLS fingerprint rotation and a
+residential proxy, added to the affinity matrix at that point.
 
 Engine score formula:
 
@@ -138,14 +171,13 @@ score = (intent_affinity * 0.40)
       + (diversity_bonus * 0.10)
 ```
 
-Affinity update after each query outcome:
+Affinity update after each query outcome (Phase 3):
 
 ```
 new_affinity = old_affinity * 0.95 + outcome_signal * 0.05
 ```
 
-Where outcome_signal comes from cross-encoder relevance scores on the returned
-results. High relevance nudges affinity up. Low relevance nudges it down.
+outcome_signal derives from cross-encoder relevance scores on returned results.
 Phase 1 seeds expert values and does not update. Phase 3 activates updates.
 
 ---
@@ -225,8 +257,8 @@ opensearch/
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── models/
-│   ├── classifier/     fine-tuned distilbert weights from opensearch-models
-│   └── relevance/      cross-encoder downloaded at container startup
+│   ├── classifier/     fine-tuned distilbert weights (~253MB)
+│   └── relevance/      pinned cross-encoder weights (91MB)
 ├── proto/
 │   ├── crawler/
 │   └── models/

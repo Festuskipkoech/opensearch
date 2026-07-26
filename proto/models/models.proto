@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package models;
+
+option go_package = "opensearch/gen/go/models";
+
+service ModelService {
+  rpc Classify  (ClassifyRequest)  returns (ClassifyResponse);
+  rpc Relevance (RelevanceRequest) returns (RelevanceResponse);
+}
+
+message ClassifyRequest {
+  string query = 1;
+}
+
+message ClassifyResponse {
+  string intent     = 1;
+  float  confidence = 2;
+}
+
+message RelevanceRequest {
+  string query   = 1;
+  string snippet = 2;
+}
+
+message RelevanceResponse {
+  float score = 1;
+}
