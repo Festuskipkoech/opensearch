@@ -14,8 +14,8 @@ type Config struct {
 	RedisURL string
 	RedisDB int
 	SearXNGURL string
+	ModelServiceAddr string
 	CrawlerAddr string
-	ModelPath string
 
 	TTLNews int
 	TTLFactual int
@@ -38,8 +38,8 @@ func Load() (*Config, error) {
 		Port: require("PORT", &missing),
 		RedisURL: require("REDIS_URL", &missing),
 		SearXNGURL: require("SEARXNG_URL", &missing),
-		CrawlerAddr: require("CRAWLER_ADDR", &missing),
-		ModelPath: require("MODEL_PATH", &missing),
+		ModelServiceAddr: require("MODEL_SERVICE_ADDR", &missing),
+		CrawlerAddr:      require("CRAWLER_ADDR", &missing),
 
 		RedisDB: requireInt("REDIS_DB", &missing, &invalid),
 		TTLNews: requireInt("TTL_NEWS", &missing, &invalid),

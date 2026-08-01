@@ -11,12 +11,14 @@ class ClassifyRequest(_message.Message):
     def __init__(self, query: _Optional[str] = ...) -> None: ...
 
 class ClassifyResponse(_message.Message):
-    __slots__ = ("intent", "confidence")
+    __slots__ = ("intent", "confidence", "runner_up")
     INTENT_FIELD_NUMBER: _ClassVar[int]
     CONFIDENCE_FIELD_NUMBER: _ClassVar[int]
+    RUNNER_UP_FIELD_NUMBER: _ClassVar[int]
     intent: str
     confidence: float
-    def __init__(self, intent: _Optional[str] = ..., confidence: _Optional[float] = ...) -> None: ...
+    runner_up: str
+    def __init__(self, intent: _Optional[str] = ..., confidence: _Optional[float] = ..., runner_up: _Optional[str] = ...) -> None: ...
 
 class RelevanceRequest(_message.Message):
     __slots__ = ("query", "snippet")

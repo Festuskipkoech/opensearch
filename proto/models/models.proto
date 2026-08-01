@@ -16,6 +16,7 @@ message ClassifyRequest {
 message ClassifyResponse {
   string intent     = 1;
   float  confidence = 2;
+  string runner_up  = 3; // second best intent class for hedge routing
 }
 
 message RelevanceRequest {

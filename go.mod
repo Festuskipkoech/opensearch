@@ -15,6 +15,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clems4ever/all-minilm-l6-v2-go v0.0.9 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
+	github.com/google/uuid v1.6.0
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect

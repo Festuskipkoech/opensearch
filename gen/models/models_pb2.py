@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cmodels.proto\x12\x06models\" \n\x0f\x43lassifyRequest\x12\r\n\x05query\x18\x01 \x01(\t\"6\n\x10\x43lassifyResponse\x12\x0e\n\x06intent\x18\x01 \x01(\t\x12\x12\n\nconfidence\x18\x02 \x01(\x02\"2\n\x10RelevanceRequest\x12\r\n\x05query\x18\x01 \x01(\t\x12\x0f\n\x07snippet\x18\x02 \x01(\t\"\"\n\x11RelevanceResponse\x12\r\n\x05score\x18\x01 \x01(\x02\x32\x8f\x01\n\x0cModelService\x12=\n\x08\x43lassify\x12\x17.models.ClassifyRequest\x1a\x18.models.ClassifyResponse\x12@\n\tRelevance\x12\x18.models.RelevanceRequest\x1a\x19.models.RelevanceResponseB\x1aZ\x18opensearch/gen/go/modelsb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cmodels.proto\x12\x06models\" \n\x0f\x43lassifyRequest\x12\r\n\x05query\x18\x01 \x01(\t\"I\n\x10\x43lassifyResponse\x12\x0e\n\x06intent\x18\x01 \x01(\t\x12\x12\n\nconfidence\x18\x02 \x01(\x02\x12\x11\n\trunner_up\x18\x03 \x01(\t\"2\n\x10RelevanceRequest\x12\r\n\x05query\x18\x01 \x01(\t\x12\x0f\n\x07snippet\x18\x02 \x01(\t\"\"\n\x11RelevanceResponse\x12\r\n\x05score\x18\x01 \x01(\x02\x32\x8f\x01\n\x0cModelService\x12=\n\x08\x43lassify\x12\x17.models.ClassifyRequest\x1a\x18.models.ClassifyResponse\x12@\n\tRelevance\x12\x18.models.RelevanceRequest\x1a\x19.models.RelevanceResponseB\x1aZ\x18opensearch/gen/go/modelsb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -35,11 +35,11 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_CLASSIFYREQUEST']._serialized_start=24
   _globals['_CLASSIFYREQUEST']._serialized_end=56
   _globals['_CLASSIFYRESPONSE']._serialized_start=58
-  _globals['_CLASSIFYRESPONSE']._serialized_end=112
-  _globals['_RELEVANCEREQUEST']._serialized_start=114
-  _globals['_RELEVANCEREQUEST']._serialized_end=164
-  _globals['_RELEVANCERESPONSE']._serialized_start=166
-  _globals['_RELEVANCERESPONSE']._serialized_end=200
-  _globals['_MODELSERVICE']._serialized_start=203
-  _globals['_MODELSERVICE']._serialized_end=346
+  _globals['_CLASSIFYRESPONSE']._serialized_end=131
+  _globals['_RELEVANCEREQUEST']._serialized_start=133
+  _globals['_RELEVANCEREQUEST']._serialized_end=183
+  _globals['_RELEVANCERESPONSE']._serialized_start=185
+  _globals['_RELEVANCERESPONSE']._serialized_end=219
+  _globals['_MODELSERVICE']._serialized_start=222
+  _globals['_MODELSERVICE']._serialized_end=365
 # @@protoc_insertion_point(module_scope)

@@ -69,6 +69,7 @@ type ClassifyResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Intent        string                 `protobuf:"bytes,1,opt,name=intent,proto3" json:"intent,omitempty"`
 	Confidence    float32                `protobuf:"fixed32,2,opt,name=confidence,proto3" json:"confidence,omitempty"`
+	RunnerUp      string                 `protobuf:"bytes,3,opt,name=runner_up,json=runnerUp,proto3" json:"runner_up,omitempty"` // second best intent class for hedge routing
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -115,6 +116,13 @@ func (x *ClassifyResponse) GetConfidence() float32 {
 		return x.Confidence
 	}
 	return 0
+}
+
+func (x *ClassifyResponse) GetRunnerUp() string {
+	if x != nil {
+		return x.RunnerUp
+	}
+	return ""
 }
 
 type RelevanceRequest struct {
@@ -219,12 +227,13 @@ const file_models_proto_rawDesc = "" +
 	"\n" +
 	"\fmodels.proto\x12\x06models\"'\n" +
 	"\x0fClassifyRequest\x12\x14\n" +
-	"\x05query\x18\x01 \x01(\tR\x05query\"J\n" +
+	"\x05query\x18\x01 \x01(\tR\x05query\"g\n" +
 	"\x10ClassifyResponse\x12\x16\n" +
 	"\x06intent\x18\x01 \x01(\tR\x06intent\x12\x1e\n" +
 	"\n" +
 	"confidence\x18\x02 \x01(\x02R\n" +
-	"confidence\"B\n" +
+	"confidence\x12\x1b\n" +
+	"\trunner_up\x18\x03 \x01(\tR\brunnerUp\"B\n" +
 	"\x10RelevanceRequest\x12\x14\n" +
 	"\x05query\x18\x01 \x01(\tR\x05query\x12\x18\n" +
 	"\asnippet\x18\x02 \x01(\tR\asnippet\")\n" +
