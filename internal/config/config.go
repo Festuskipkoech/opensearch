@@ -27,6 +27,8 @@ type Config struct {
 	ClassifierConfidenceThreshold float64
 	MaxCrawlURLs int
 	MinFanOutResults int
+
+	SearXNGSecretKey string
 }
 
 // Load reads all configuration from environment variables.
@@ -39,7 +41,7 @@ func Load() (*Config, error) {
 		RedisURL: require("REDIS_URL", &missing),
 		SearXNGURL: require("SEARXNG_URL", &missing),
 		ModelServiceAddr: require("MODEL_SERVICE_ADDR", &missing),
-		CrawlerAddr:      require("CRAWLER_ADDR", &missing),
+		CrawlerAddr: require("CRAWLER_ADDR", &missing),
 
 		RedisDB: requireInt("REDIS_DB", &missing, &invalid),
 		TTLNews: requireInt("TTL_NEWS", &missing, &invalid),
@@ -52,6 +54,8 @@ func Load() (*Config, error) {
 		MinFanOutResults: requireInt("MIN_FAN_OUT_RESULTS", &missing, &invalid),
 
 		ClassifierConfidenceThreshold: requireFloat("CLASSIFIER_CONFIDENCE_THRESHOLD", &missing, &invalid),
+
+		SearXNGSecretKey: require("SEARXNG_SECRET_KEY", &missing),
 	}
 
 	if len(missing) > 0 {

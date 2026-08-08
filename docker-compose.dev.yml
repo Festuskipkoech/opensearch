@@ -1,0 +1,28 @@
+name: opensearch-dev
+
+services:
+  redis:
+    image: redis:8.10.0-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --save "" --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  searxng:
+    image: searxng/searxng:2026.5.26-3db8b424a
+    ports:
+      - "8888:8080"
+    volumes:
+      - ./config/searxng:/etc/searxng:ro
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8888
+      - SEARXNG_SECRET=${SEARXNG_SECRET_KEY}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

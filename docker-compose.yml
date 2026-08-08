@@ -1,0 +1,67 @@
+name: opensearch
+
+services:
+  redis:
+    image: redis:8.10.0-alpine
+    command: redis-server --save "" --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  searxng:
+    image: searxng/searxng:2026.5.26-3db8b424a
+    volumes:
+      - ./config/searxng:/etc/searxng
+    environment:
+      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://localhost:8888}
+      - SEARXNG_SECRET_KEY=${SEARXNG_SECRET_KEY}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  model_service:
+    build:
+      context: .
+      dockerfile: model_service/Dockerfile
+    expose:
+      - "50052"
+    healthcheck:
+      test: ["CMD", "python", "-c",
+        "import grpc; ch = grpc.insecure_channel('localhost:50052'); grpc.channel_ready_future(ch).result(timeout=5)"]
+      interval: 10s
+      timeout: 8s
+      retries: 5
+    restart: unless-stopped
+
+  opensearch:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - SEARXNG_URL=http://searxng:8080
+      - MODEL_SERVICE_ADDR=model_service:50052
+      - CRAWLER_ADDR=crawler:50051
+    depends_on:
+      redis:
+        condition: service_healthy
+      searxng:
+        condition: service_healthy
+      model_service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped

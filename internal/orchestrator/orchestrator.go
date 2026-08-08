@@ -15,7 +15,7 @@ import (
 
 // Request is what the API layer passes in after parsing the HTTP body.
 type Request struct {
-	Query       string
+	Query string
 	AgentIntent string
 	MaxResults  int
 }
@@ -64,13 +64,13 @@ func New(
 	ttlFor func(string) int,
 ) *Orchestrator {
 	return &Orchestrator{
-		cache:   c,
-		clf:     clf,
+		cache: c,
+		clf: clf,
 		router:  r,
 		searxng: s,
-		merger:  merger.Merge,
+		merger: merger.Merge,
 		crawler: crawler.Decide,
-		ttlFor:  ttlFor,
+		ttlFor: ttlFor,
 	}
 }
 
@@ -124,11 +124,11 @@ func (o *Orchestrator) Search(ctx context.Context, req Request) (types.Response,
 	}
 
 	resp := types.Response{
-		Query:     req.Query,
-		Intent:    intent.Class,
+		Query: req.Query,
+		Intent: intent.Class,
 		Uncertain: intent.Uncertain,
-		Results:   results,
-		Cached:    false,
+		Results:  results,
+		Cached: false,
 		LatencyMS: time.Since(start).Milliseconds(),
 	}
 

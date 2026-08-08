@@ -3,6 +3,7 @@ import sys
 from concurrent import futures
 
 import grpc
+from grpc_health.v1 import health, health_pb2, health_pb2_grpc
 
 from classifier import Classifier
 from relevance import Relevance
@@ -17,7 +18,8 @@ log = logging.getLogger(__name__)
 CLASSIFIER_PATH = "../models/classifier"
 RELEVANCE_PATH  = "../models/relevance"
 PORT = "[::]:50052"
-MAX_WORKERS  = 4
+MAX_WORKERS = 4
+
 
 class ModelServicer(models_pb2_grpc.ModelServiceServicer):
     def __init__(self, classifier: Classifier, relevance: Relevance):
@@ -45,28 +47,49 @@ class ModelServicer(models_pb2_grpc.ModelServiceServicer):
 
 def load_models() -> tuple[Classifier, Relevance]:
     log.info("loading classifier from %s", CLASSIFIER_PATH)
-    classifier = Classifier(CLASSIFIER_PATH)
+    try:
+        clf = Classifier(CLASSIFIER_PATH)
+    except Exception as e:
+        log.error("failed to load classifier: %s", e)
+        sys.exit(1)
     log.info("classifier loaded")
 
     log.info("loading relevance model from %s", RELEVANCE_PATH)
-    relevance = Relevance(RELEVANCE_PATH)
+    try:
+        rel = Relevance(RELEVANCE_PATH)
+    except Exception as e:
+        log.error("failed to load relevance model: %s", e)
+        sys.exit(1)
     log.info("relevance model loaded")
 
-    return classifier, relevance
+    return clf, rel
 
 
 def serve():
-    classifier, relevance = load_models()
+    # load and verify both models before binding the port
+    # if either fails the process exits — no degraded startup
+    clf, rel = load_models()
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=MAX_WORKERS))
+
+    # register model service
     models_pb2_grpc.add_ModelServiceServicer_to_server(
-        ModelServicer(classifier, relevance), server
+        ModelServicer(clf, rel), server
     )
+
+    # register standard gRPC health service
+    # main.go uses this to verify the service is ready before accepting traffic
+    health_servicer = health.HealthServicer()
+    health_pb2_grpc.add_HealthServicer_to_server(health_servicer, server)
+    health_servicer.set("", health_pb2.HealthCheckResponse.SERVING)
+    health_servicer.set("ModelService", health_pb2.HealthCheckResponse.SERVING)
+
     server.add_insecure_port(PORT)
     server.start()
 
     log.info("model service ready on %s", PORT)
     server.wait_for_termination()
+
 
 if __name__ == "__main__":
     serve()
