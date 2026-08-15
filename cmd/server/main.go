@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-    "github.com/joho/godotenv"
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
@@ -22,6 +22,7 @@ import (
 	"opensearch/internal/orchestrator"
 	"opensearch/internal/router"
 	"opensearch/internal/searxng"
+	"opensearch/internal/crawler"
 )
 
 const (
@@ -31,21 +32,21 @@ const (
 
 func main() {
 	if err := godotenv.Load(); err != nil {
-        slog.Warn("no .env file, reading from environment", "error", err)
-    }
-	
-	slog.Info("Env's loaded successfully!")
+		slog.Warn("no .env file, reading from environment", "error", err)
+	}
+
+	slog.Info("env loaded")
 
 	cfg, err := config.Load()
 	if err != nil {
-		slog.Error("Config error", "error", err)
+		slog.Error("config error", "error", err)
 		os.Exit(1)
 	}
 
-	// redis
+	// Redis
 	redisCache, err := cache.New(cfg.RedisURL, cfg.RedisDB)
 	if err != nil {
-		slog.Error("redis init failed ", "error", err)
+		slog.Error("redis init failed", "error", err)
 		os.Exit(1)
 	}
 	defer redisCache.Close()
@@ -61,7 +62,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// model service gRPC connection
+	// Model service gRPC connection
 	modelConn, err := grpc.NewClient(
 		cfg.ModelServiceAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -71,13 +72,29 @@ func main() {
 		os.Exit(1)
 	}
 	defer modelConn.Close()
-	
-	if err := waitForGRPC(modelConn, "model service"); err != nil {
+
+	if err := waitForGRPC(modelConn, "model-service"); err != nil {
 		slog.Error("model service not ready", "error", err)
 		os.Exit(1)
 	}
 
-	// wire dependencies
+	// Spider-rs gRPC connection
+	spiderConn, err := grpc.NewClient(
+		cfg.SpiderAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		slog.Error("spider connection failed", "error", err)
+		os.Exit(1)
+	}
+	defer spiderConn.Close()
+
+	if err := waitForGRPC(spiderConn, "spider"); err != nil {
+		slog.Error("spider not ready", "error", err)
+		os.Exit(1)
+	}
+
+	// Wire dependencies
 	clf := classifier.New(modelConn, float32(cfg.ClassifierConfidenceThreshold))
 	rtr := router.New()
 	searxngClient := searxng.New(cfg.SearXNGURL, cfg.MinFanOutResults)
@@ -87,8 +104,13 @@ func main() {
 		clf,
 		rtr,
 		searxngClient,
+		&crawler.Decider{
+			ModelConn: modelConn,
+			SpiderConn: spiderConn,
+		},
 		cfg.TTLForIntent,
 	)
+
 	mux := http.NewServeMux()
 	handler := api.NewHandler(orch)
 	api.RegisterRoutes(mux, handler)
@@ -101,8 +123,8 @@ func main() {
 		IdleTimeout: 120 * time.Second,
 	}
 
-	go func () {
-		slog.Info("server running", "port", cfg.Port)		
+	go func() {
+		slog.Info("server running", "port", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("server error", "error", err)
 			os.Exit(1)
@@ -112,8 +134,8 @@ func main() {
 	sigCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	<-sigCtx.Done()
-	
-	slog.Info("shutdown signal retrieve")
+
+	slog.Info("shutdown signal received")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -125,7 +147,6 @@ func main() {
 	slog.Info("server stopped cleanly")
 }
 
-// waitForRedis pings Redis with retries and exponential backoff.
 func waitForRedis(c *cache.Cache) error {
 	for i := range startupRetries {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -141,11 +162,10 @@ func waitForRedis(c *cache.Cache) error {
 	return fmt.Errorf("redis did not become ready after %d attempts", startupRetries)
 }
 
-// waitForSearXNG hits the SearXNG healthz endpoint with retries.
-func waitForSearXNG(baseURL  string) error {
-	client:= &http.Client{Timeout: 3 * time.Second}
+func waitForSearXNG(baseURL string) error {
+	client := &http.Client{Timeout: 3 * time.Second}
 	url := baseURL + "/healthz"
- 
+
 	for i := range startupRetries {
 		resp, err := client.Get(url)
 		if err == nil {
@@ -155,17 +175,15 @@ func waitForSearXNG(baseURL  string) error {
 				return nil
 			}
 		}
-		slog.Warn("searxng not ready, retrying",
-			"attempt", i+1, "of", startupRetries)
+		slog.Warn("searxng not ready, retrying", "attempt", i+1, "of", startupRetries)
 		time.Sleep(startupInterval)
 	}
 	return fmt.Errorf("searxng did not become ready after %d attempts", startupRetries)
 }
 
-// waitForGRPC checks a gRPC connection is serving with retries.
 func waitForGRPC(conn *grpc.ClientConn, name string) error {
 	hc := grpc_health_v1.NewHealthClient(conn)
- 
+
 	for i := range startupRetries {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		resp, err := hc.Check(ctx, &grpc_health_v1.HealthCheckRequest{})
@@ -174,8 +192,7 @@ func waitForGRPC(conn *grpc.ClientConn, name string) error {
 			slog.Info("connected", "service", name)
 			return nil
 		}
-		slog.Warn("not ready, retrying",
-			"service", name, "attempt", i+1, "of", startupRetries)
+		slog.Warn("not ready, retrying", "service", name, "attempt", i+1, "of", startupRetries)
 		time.Sleep(startupInterval)
 	}
 	return fmt.Errorf("%s did not become ready after %d attempts", name, startupRetries)

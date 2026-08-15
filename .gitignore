@@ -1,3 +1,4 @@
 .env
 model_service/.venv/
 models/
+spider/target/

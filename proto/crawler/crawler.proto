@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package crawler;
+
+option go_package = "opensearch/gen/go/crawler";
+
+// CrawlerService is implemented by the Rust Spider-rs binary.
+// The Go engine is the sole caller — it owns both sides of this boundary.
+service CrawlerService {
+  // StreamCrawl fetches a list of URLs concurrently and streams back one
+  // CrawlResult per URL as each completes. The stream closes when all URLs
+  // are done or the context is cancelled.
+  rpc StreamCrawl (CrawlRequest) returns (stream CrawlResult);
+}
+
+// CrawlRequest carries the URLs the Go engine wants fetched.
+// URLs are ordered by relevance score — Spider-rs does not reorder them.
+message CrawlRequest {
+  repeated string urls = 1;
+}
+
+// CrawlResult is one fetched page. Streamed back as each URL completes.
+// A failed fetch sets error and leaves content and token_count empty —
+// the stream continues for remaining URLs.
+message CrawlResult {
+  string url         = 1;
+  string content     = 2; // clean markdown from spider_transformations
+  uint32 status_code = 3; // HTTP status — 0 means connection-level failure
+  string error       = 4; // non-empty only on failure
+  uint32 token_count = 5; // approximate token count of content field
+}

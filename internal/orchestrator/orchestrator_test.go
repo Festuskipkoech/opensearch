@@ -8,12 +8,11 @@ import (
 
 	"opensearch/internal/cache"
 	"opensearch/internal/classifier"
+	"opensearch/internal/crawler"
 	"opensearch/internal/merger"
 	"opensearch/internal/types"
 )
 
-// --- fakes ---
-// fakeCache controls cache hits and misses and records writes.
 type fakeCache struct {
 	stored map[string]types.Response
 	writes int
@@ -21,11 +20,12 @@ type fakeCache struct {
 }
 
 func newFakeCache() *fakeCache {
-    return &fakeCache{
-        stored: make(map[string]types.Response),
-        done: make(chan struct{}),
-    }
+	return &fakeCache{
+		stored: make(map[string]types.Response),
+		done: make(chan struct{}),
+	}
 }
+
 func (f *fakeCache) Get(_ context.Context, key string) (types.Response, error) {
 	if r, ok := f.stored[key]; ok {
 		return r, nil
@@ -34,16 +34,15 @@ func (f *fakeCache) Get(_ context.Context, key string) (types.Response, error) {
 }
 
 func (f *fakeCache) Set(_ context.Context, key string, r types.Response, _ time.Duration) error {
-    f.stored[key] = r
-    f.writes++
-    close(f.done)
-    return nil
+	f.stored[key] = r
+	f.writes++
+	close(f.done)
+	return nil
 }
 
-// fakeClassifier returns controlled Intent values without gRPC.
 type fakeClassifier struct {
 	intent classifier.Intent
-	err    error
+	err error
 }
 
 func (f *fakeClassifier) Classify(_ context.Context, _ string) (classifier.Intent, error) {
@@ -57,7 +56,6 @@ func (f *fakeClassifier) AgentIntent(class string) (classifier.Intent, error) {
 	return classifier.Intent{Class: class, Confidence: 1.0, Uncertain: false}, nil
 }
 
-// fakeSearXNG returns controlled results without HTTP calls.
 type fakeSearXNG struct {
 	results []merger.Result
 }
@@ -66,18 +64,21 @@ func (f *fakeSearXNG) Search(_ context.Context, _ string, _ []string) []merger.R
 	return f.results
 }
 
-// fakeRouter returns fixed engine lists without affinity scoring.
 type fakeRouter struct{}
 
-func (f *fakeRouter) Select(_ string) []string        { return []string{"brave", "ddg"} }
+func (f *fakeRouter) Select(_ string) []string { return []string{"brave", "ddg"} }
 func (f *fakeRouter) SelectHedge(_, _ string) []string { return []string{"brave", "ddg", "mojeek"} }
 
-// --- builder ---
-func buildOrchestrator(fc *fakeCache, clf *fakeClassifier, results []merger.Result) *Orchestrator {
-	return New(fc, clf, &fakeRouter{}, &fakeSearXNG{results: results}, func(_ string) int { return 3600 })
+type fakeCrawler struct{}
+
+func (f *fakeCrawler) Decide(_ context.Context, _ crawler.Request) crawler.Decision {
+	return crawler.Decision{Sufficient: true}
 }
 
-// --- tests ---
+func buildOrchestrator(fc *fakeCache, clf *fakeClassifier, results []merger.Result) *Orchestrator {
+	return New(fc, clf, &fakeRouter{}, &fakeSearXNG{results: results}, &fakeCrawler{}, func(_ string) int { return 3600 })
+}
+
 func TestSearchEmptyQueryReturnsError(t *testing.T) {
 	o := buildOrchestrator(newFakeCache(), &fakeClassifier{}, nil)
 
@@ -90,8 +91,6 @@ func TestSearchEmptyQueryReturnsError(t *testing.T) {
 func TestSearchCacheHitReturnsCachedResponse(t *testing.T) {
 	fc := newFakeCache()
 	cached := types.Response{Query: "goroutine", Intent: "code", Cached: false}
-
-	// pre-populate cache with the key the orchestrator will look up
 	key := cache.Key("goroutine", "")
 	fc.stored[key] = cached
 
@@ -114,7 +113,6 @@ func TestSearchCacheHitSkipsClassifier(t *testing.T) {
 	key := cache.Key("goroutine", "")
 	fc.stored[key] = types.Response{Query: "goroutine", Intent: "code"}
 
-	// classifier returns an error — if called the test will fail
 	clf := &fakeClassifier{err: errors.New("classifier must not be called on cache hit")}
 	o := buildOrchestrator(fc, clf, nil)
 
@@ -125,16 +123,9 @@ func TestSearchCacheHitSkipsClassifier(t *testing.T) {
 }
 
 func TestSearchCacheMissCallsClassifier(t *testing.T) {
-	called := false
 	clf := &fakeClassifier{
 		intent: classifier.Intent{Class: "code", Confidence: 0.95},
 	}
-
-	// wrap to detect call
-	original := clf.intent
-	clf.intent = original
-	_ = called // suppress unused warning
-
 	o := buildOrchestrator(newFakeCache(), clf, []merger.Result{
 		{URL: "https://go.dev", Domain: "go.dev", Engine: "brave", Score: 0.9},
 	})
@@ -149,14 +140,13 @@ func TestSearchCacheMissCallsClassifier(t *testing.T) {
 }
 
 func TestSearchAgentIntentSkipsClassifier(t *testing.T) {
-	// classifier returns error — if called the test will surface it
 	clf := &fakeClassifier{err: errors.New("classifier must not be called when agent provides intent")}
 	o := buildOrchestrator(newFakeCache(), clf, []merger.Result{
 		{URL: "https://go.dev", Domain: "go.dev", Engine: "brave", Score: 0.9},
 	})
 
 	resp, err := o.Search(context.Background(), Request{
-		Query:       "goroutine scheduling",
+		Query: "goroutine scheduling",
 		AgentIntent: "code",
 	})
 	if err != nil {
@@ -171,7 +161,7 @@ func TestSearchAgentIntentInvalidClassReturnsError(t *testing.T) {
 	o := buildOrchestrator(newFakeCache(), &fakeClassifier{}, nil)
 
 	_, err := o.Search(context.Background(), Request{
-		Query:       "some query",
+		Query: "some query",
 		AgentIntent: "invalid",
 	})
 	if err == nil {
@@ -182,10 +172,10 @@ func TestSearchAgentIntentInvalidClassReturnsError(t *testing.T) {
 func TestSearchUncertainIntentUsesHedgeRouting(t *testing.T) {
 	clf := &fakeClassifier{
 		intent: classifier.Intent{
-			Class:      "code",
-			RunnerUp:   "research",
+			Class: "code",
+			RunnerUp: "research",
 			Confidence: 0.55,
-			Uncertain:  true,
+			Uncertain: true,
 		},
 	}
 	o := buildOrchestrator(newFakeCache(), clf, []merger.Result{
@@ -209,16 +199,12 @@ func TestSearchMaxResultsCapsOutput(t *testing.T) {
 		{URL: "https://d.com", Domain: "d.com", Engine: "brave", Score: 0.6},
 		{URL: "https://e.com", Domain: "e.com", Engine: "brave", Score: 0.5},
 	}
-
 	clf := &fakeClassifier{
 		intent: classifier.Intent{Class: "general", Confidence: 0.90},
 	}
 	o := buildOrchestrator(newFakeCache(), clf, results)
 
-	resp, err := o.Search(context.Background(), Request{
-		Query:      "something",
-		MaxResults: 3,
-	})
+	resp, err := o.Search(context.Background(), Request{Query: "something", MaxResults: 3})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -241,7 +227,6 @@ func TestSearchWritesToCacheAfterMiss(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// give the fire-and-forget goroutine time to complete
 	<-fc.done
 
 	if fc.writes == 0 {

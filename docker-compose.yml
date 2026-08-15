@@ -3,41 +3,68 @@ name: opensearch
 services:
   redis:
     image: redis:8.10.0-alpine
+    ports:
+      - "6379:6379"
     command: redis-server --save "" --appendonly no
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
-    restart: unless-stopped
 
   searxng:
     image: searxng/searxng:2026.5.26-3db8b424a
+    ports:
+      - "8888:8080"
     volumes:
-      - ./config/searxng:/etc/searxng
+      - ./config/searxng:/etc/searxng:ro
     environment:
-      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://localhost:8888}
-      - SEARXNG_SECRET_KEY=${SEARXNG_SECRET_KEY}
+      - SEARXNG_BASE_URL=http://localhost:8888
+      - SEARXNG_SECRET=${SEARXNG_SECRET_KEY}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
 
-  model_service:
+  model-service:
     build:
       context: .
       dockerfile: model_service/Dockerfile
-    expose:
-      - "50052"
+    ports:
+      - "50051:50051"
+    volumes:
+      - ./models:/app/models:ro
     healthcheck:
       test: ["CMD", "python", "-c",
-        "import grpc; ch = grpc.insecure_channel('localhost:50052'); grpc.channel_ready_future(ch).result(timeout=5)"]
+        "import grpc, sys; from grpc_health.v1 import health_pb2, health_pb2_grpc; ch = grpc.insecure_channel('localhost:50051'); s = health_pb2_grpc.HealthStub(ch); r = s.Check(health_pb2.HealthCheckRequest()); sys.exit(0 if r.status == health_pb2.HealthCheckResponse.SERVING else 1)"]
       interval: 10s
-      timeout: 8s
-      retries: 5
-    restart: unless-stopped
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  spider:
+    build:
+      context: .
+      dockerfile: spider/Dockerfile
+    ports:
+      - "50052:50052"
+    environment:
+      - SPIDER_PORT=50052
+      - RUST_LOG=info
+    healthcheck:
+      # grpc_health_probe checks the standard gRPC health endpoint that
+      # tonic-health exposes. Installed in the runtime image below.
+      # Alternative: the Go engine's waitForGRPC does the same check on startup.
+      test: ["CMD-SHELL",
+        "python3 -c \"import socket; s = socket.socket(); s.settimeout(2); s.connect(('localhost', 50052)); s.close()\" 2>/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    depends_on:
+      redis:
+        condition: service_healthy
 
   opensearch:
     build:
@@ -50,18 +77,14 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379
       - SEARXNG_URL=http://searxng:8080
-      - MODEL_SERVICE_ADDR=model_service:50052
-      - CRAWLER_ADDR=crawler:50051
+      - MODEL_SERVICE_ADDR=model-service:50051
+      - SPIDER_ADDR=spider:50052
     depends_on:
       redis:
         condition: service_healthy
       searxng:
         condition: service_healthy
-      model_service:
+      model-service:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
+      spider:
+        condition: service_healthy

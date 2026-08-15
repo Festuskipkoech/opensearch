@@ -1,0 +1,53 @@
+[package]
+name  = "opensearch-spider"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "opensearch-spider"
+path = "src/main.rs"
+
+[dependencies]
+# Spider crawler — only the features we actually use:
+#   sync — broadcast channel so pages stream as they arrive
+#   ua_generator — rotates real User-Agent strings, reduces bot detection
+#   encoding — handles non-UTF-8 pages (Shift_JIS, latin-1, etc.)
+spider = { version = "2", features = ["sync", "ua_generator", "encoding"] }
+
+# HTML-to-markdown conversion — spider's own companion crate
+spider_transformations = "2"
+
+# gRPC server
+tonic = "0.14.6"
+tonic-prost = "0.14"
+prost = "0.14.4"
+
+# Async runtime
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+# Stream adapter: wraps tokio mpsc::Receiver as a tonic-compatible Stream
+tokio-stream = { version = "0.1", features = ["sync"] }
+
+# gRPC health check endpoint — the Go engine's waitForGRPC startup probe
+# calls Check before accepting any traffic
+tonic-health = "0.14.6"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[build-dependencies]
+tonic-prost-build = "0.14"
+# mimalloc gives 30-60% throughput improvement under concurrent crawls.
+# spider's README recommends it explicitly for mixed crawl+parse workloads.
+[dependencies.mimalloc]
+version = "0.1"
+default-features = false
+
+# Release profile: strip debug symbols, enable full optimisation.
+# The multi-stage Dockerfile copies only the stripped binary into the
+# runtime image, keeping the final image small.
+[profile.release]
+opt-level = 3
+lto = true
+strip= true
