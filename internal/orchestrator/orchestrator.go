@@ -133,9 +133,15 @@ func (o *Orchestrator) Search(ctx context.Context, req Request) (types.Response,
 	return resp, nil
 }
 
+var ErrInvalidIntent = fmt.Errorf("invalid intent class")
+
 func (o *Orchestrator) resolveIntent(ctx context.Context, req Request) (classifier.Intent, error) {
 	if req.AgentIntent != "" {
-		return o.clf.AgentIntent(req.AgentIntent)
+		intent, err := o.clf.AgentIntent(req.AgentIntent)
+		if err != nil {
+			return classifier.Intent{}, fmt.Errorf("%w: %w", ErrInvalidIntent, err)
+		}
+		return intent, nil
 	}
 	return o.clf.Classify(ctx, req.Query)
 }

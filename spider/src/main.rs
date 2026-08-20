@@ -29,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
 
     let port: u16 = std::env::var("SPIDER_PORT")
-        .unwrap_or_else(|_| "50051".to_string())
+        .unwrap_or_else(|_| "50052".to_string())
         .parse()
         .expect("SPIDER_PORT must be a valid port number");
 

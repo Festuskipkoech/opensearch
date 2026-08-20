@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 
 CLASSIFIER_PATH = "../models/classifier"
 RELEVANCE_PATH  = "../models/relevance"
-PORT = "[::]:50052"
+PORT = "[::]:50051"
 MAX_WORKERS = 4
 
 

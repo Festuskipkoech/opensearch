@@ -59,28 +59,48 @@ func Decide(ctx context.Context, req Request, modelConn *grpc.ClientConn, spider
 func averageSufficiency(ctx context.Context, query string, results []merger.Result, modelConn *grpc.ClientConn) float64 {
 	client := genmodels.NewModelServiceClient(modelConn)
 
-	var total float64
-	for _, r := range results {
-		resp, err := client.Relevance(ctx, &genmodels.RelevanceRequest{
-			Query:   query,
-			Snippet: r.Snippet,
-		})
-		if err != nil {
-			slog.Warn("relevance call failed, using zero score", "url", r.URL, "error", err)
-			continue
-		}
-
-		sufficiency := (float64(resp.Score) * 0.50) +
-			(snippetDensity(r.Snippet) * 0.30) +
-			(sourceAuthority(r.Domain) * 0.20)
-
-		total += sufficiency
+	type scored struct {
+		score float64
+		ok    bool
 	}
 
-	if len(results) == 0 {
+	scores := make(chan scored, len(results))
+
+	for _, r := range results {
+		r := r
+		go func() {
+			resp, err := client.Relevance(ctx, &genmodels.RelevanceRequest{
+				Query:   query,
+				Snippet: r.Snippet,
+			})
+			if err != nil {
+				slog.Warn("relevance call failed, using zero score", "url", r.URL, "error", err)
+				scores <- scored{ok: false}
+				return
+			}
+
+			sufficiency := (float64(resp.Score) * 0.50) +
+				(snippetDensity(r.Snippet) * 0.30) +
+				(sourceAuthority(r.Domain) * 0.20)
+
+			scores <- scored{score: sufficiency, ok: true}
+		}()
+	}
+
+	var total float64
+	var counted int
+	for range results {
+		s := <-scores
+		if s.ok {
+			total += s.score
+			counted++
+		}
+	}
+
+	if counted == 0 {
 		return 0
 	}
-	return total / float64(len(results))
+	return total / float64(counted)
 }
 
 func snippetDensity(snippet string) float64 {

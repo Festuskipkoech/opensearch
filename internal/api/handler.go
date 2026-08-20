@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"opensearch/internal/orchestrator"
@@ -54,6 +55,10 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
 		MaxResults: maxResults,
 	})
 	if err != nil {
+		if errors.Is(err, orchestrator.ErrInvalidIntent) {
+			respondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
