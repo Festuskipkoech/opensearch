@@ -1,0 +1,408 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .browser {
+    background: #000;
+    font-family: 'Inter', sans-serif;
+    min-height: 600px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 0.5px solid #1A1A1A;
+  }
+
+  .tab-strip {
+    background: #0A0A0A;
+    display: flex;
+    align-items: flex-end;
+    padding: 10px 12px 0;
+    gap: 2px;
+    border-bottom: 0.5px solid #1A1A1A;
+  }
+
+  .tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px 10px;
+    border-radius: 6px 6px 0 0;
+    font-size: 12px;
+    color: #333;
+    cursor: pointer;
+    min-width: 140px;
+    max-width: 200px;
+    border: 0.5px solid transparent;
+    position: relative;
+  }
+
+  .tab.active {
+    background: #000;
+    color: #EDE8DC;
+    border-color: #1A1A1A;
+    border-bottom-color: #000;
+  }
+
+  .tab-favicon {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    background: #8A7B52;
+    flex-shrink: 0;
+  }
+
+  .tab-title {
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+  }
+
+  .tab-close {
+    font-size: 14px;
+    color: #333;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .tab-close:hover { color: #EDE8DC; }
+
+  .tab-new {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+    font-size: 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 2px;
+  }
+
+  .tab-new:hover { color: #EDE8DC; background: #111; }
+
+  .toolbar {
+    background: #000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 0.5px solid #1A1A1A;
+  }
+
+  .nav-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    color: #333;
+    cursor: pointer;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .nav-btn:hover { background: #111; color: #EDE8DC; }
+
+  .address-bar {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #0A0A0A;
+    border: 0.5px solid #1A1A1A;
+    border-radius: 6px;
+    padding: 0 14px;
+    height: 34px;
+    cursor: text;
+  }
+
+  .address-bar:focus-within {
+    border-color: #8A7B52;
+  }
+
+  .address-lock {
+    font-size: 12px;
+    color: #8A7B52;
+    flex-shrink: 0;
+  }
+
+  .address-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #EDE8DC;
+    caret-color: #8A7B52;
+  }
+
+  .address-input::placeholder { color: #222; }
+
+  .address-go {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8A7B52;
+    cursor: pointer;
+    padding: 4px 8px;
+    border: 0.5px solid #1A1A1A;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .address-go:hover { border-color: #8A7B52; background: #0D0C09; }
+
+  .intent-bar {
+    background: #000;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-bottom: 0.5px solid #1A1A1A;
+  }
+
+  .intent-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: #222;
+    text-transform: uppercase;
+    margin-right: 4px;
+  }
+
+  .intent-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border: 0.5px solid #1A1A1A;
+    border-radius: 2px;
+    color: #333;
+    cursor: pointer;
+    background: transparent;
+  }
+
+  .intent-pill:hover { border-color: #8A7B52; color: #8A7B52; }
+  .intent-pill.active { border-color: #8A7B52; color: #8A7B52; background: #0D0C09; }
+
+  .intent-spacer { flex: 1; }
+
+  .results-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #222;
+    letter-spacing: 0.05em;
+  }
+
+  .results-meta strong { color: #8A7B52; font-weight: 500; }
+
+  .content {
+    padding: 24px 32px 48px;
+    max-width: 720px;
+  }
+
+  .result {
+    padding: 18px 0;
+    border-bottom: 0.5px solid #0D0D0D;
+  }
+
+  .result:last-child { border-bottom: none; }
+
+  .result-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+  }
+
+  .result-favicon {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    background: #1A1A1A;
+    flex-shrink: 0;
+  }
+
+  .result-domain {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #8A7B52;
+    letter-spacing: 0.04em;
+  }
+
+  .result-source-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #1A1A1A;
+    letter-spacing: 0.04em;
+  }
+
+  .result-score {
+    display: inline-block;
+    width: 28px;
+    height: 2px;
+    background: #111;
+    border-radius: 1px;
+    position: relative;
+    overflow: hidden;
+    vertical-align: middle;
+  }
+
+  .result-score-fill {
+    position: absolute;
+    left: 0; top: 0;
+    height: 100%;
+    background: #8A7B52;
+    border-radius: 1px;
+  }
+
+  .result-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #C8C0AE;
+    margin-bottom: 6px;
+    line-height: 1.4;
+    cursor: pointer;
+  }
+
+  .result-title:hover { color: #EDE8DC; }
+
+  .result-url {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #222;
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 500px;
+  }
+
+  .result-snippet {
+    font-size: 13px;
+    color: #3A3A3A;
+    line-height: 1.7;
+    margin-bottom: 10px;
+  }
+
+  .content-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #2A2A2A;
+    border: 0.5px solid #1A1A1A;
+    border-radius: 2px;
+    padding: 2px 8px;
+    letter-spacing: 0.05em;
+  }
+
+  .content-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #8A7B52;
+    opacity: 0.6;
+  }
+</style>
+
+<div class="browser">
+  <div class="tab-strip">
+    <div class="tab active">
+      <div class="tab-favicon"></div>
+      <div class="tab-title">Redis persistence — OpenSearch</div>
+      <div class="tab-close">×</div>
+    </div>
+    <div class="tab">
+      <div class="tab-favicon" style="background:#1A1A1A"></div>
+      <div class="tab-title">goroutine scheduling</div>
+      <div class="tab-close">×</div>
+    </div>
+    <div class="tab-new">+</div>
+  </div>
+
+  <div class="toolbar">
+    <div class="nav-btn">&#8592;</div>
+    <div class="nav-btn">&#8594;</div>
+    <div class="nav-btn">&#8635;</div>
+    <div class="address-bar">
+      <span class="address-lock">&#x1F512;</span>
+      <input class="address-input" value="how does Redis persistence work" />
+      <div class="address-go">Search</div>
+    </div>
+  </div>
+
+  <div class="intent-bar">
+    <span class="intent-label">intent</span>
+    <button class="intent-pill">auto</button>
+    <button class="intent-pill active">research</button>
+    <button class="intent-pill">factual</button>
+    <button class="intent-pill">code</button>
+    <button class="intent-pill">news</button>
+    <button class="intent-pill">commercial</button>
+    <button class="intent-pill">general</button>
+    <span class="intent-spacer"></span>
+    <span class="results-meta"><strong>8</strong> results · 312ms</span>
+  </div>
+
+  <div class="content">
+    <div class="result">
+      <div class="result-top">
+        <div class="result-favicon"></div>
+        <span class="result-domain">redis.io</span>
+        <span class="result-source-tag">brave · ddg</span>
+        <span class="result-score"><span class="result-score-fill" style="width:88%"></span></span>
+      </div>
+      <div class="result-url">https://redis.io/docs/management/persistence</div>
+      <div class="result-title">Redis persistence: RDB and AOF</div>
+      <div class="result-snippet">Redis supports two primary persistence mechanisms. RDB snapshots the dataset at specified intervals while AOF logs every write operation. Each carries distinct durability and performance tradeoffs depending on your use case.</div>
+      <div class="content-badge"><span class="content-dot"></span>full content · 2,840 tokens</div>
+    </div>
+
+    <div class="result">
+      <div class="result-top">
+        <div class="result-favicon"></div>
+        <span class="result-domain">stackoverflow.com</span>
+        <span class="result-source-tag">brave</span>
+        <span class="result-score"><span class="result-score-fill" style="width:72%"></span></span>
+      </div>
+      <div class="result-url">https://stackoverflow.com/questions/5920595/redis-rdb-vs-aof</div>
+      <div class="result-title">RDB vs AOF — when to use each</div>
+      <div class="result-snippet">RDB gives compact snapshots and faster restarts. AOF offers better durability with fsync-per-second or fsync-always modes. Most production deployments run both simultaneously.</div>
+      <div class="content-badge"><span class="content-dot"></span>full content · 1,420 tokens</div>
+    </div>
+
+    <div class="result">
+      <div class="result-top">
+        <div class="result-favicon"></div>
+        <span class="result-domain">github.com</span>
+        <span class="result-source-tag">ddg</span>
+        <span class="result-score"><span class="result-score-fill" style="width:58%"></span></span>
+      </div>
+      <div class="result-url">https://github.com/redis/redis/blob/unstable/src/persistence.c</div>
+      <div class="result-title">redis/redis — persistence.c</div>
+      <div class="result-snippet">The persistence subsystem coordinates both RDB and AOF writers. The fork-based RDB writer operates without blocking the main event loop using copy-on-write semantics.</div>
+      <div class="content-badge"><span class="content-dot"></span>full content · 980 tokens</div>
+    </div>
+
+    <div class="result">
+      <div class="result-top">
+        <div class="result-favicon"></div>
+        <span class="result-domain">martin.kleppmann.com</span>
+        <span class="result-source-tag">brave</span>
+        <span class="result-score"><span class="result-score-fill" style="width:44%"></span></span>
+      </div>
+      <div class="result-url">https://martin.kleppmann.com/2020/04/storage-engines</div>
+      <div class="result-title">Designing data-intensive applications — storage engines</div>
+      <div class="result-snippet">Log-structured storage approaches trade random writes for sequential ones. Redis AOF embodies this design: append-only writes are fast, compaction happens asynchronously.</div>
+    </div>
+  </div>
+</div>

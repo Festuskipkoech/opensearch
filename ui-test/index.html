@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenSearch</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="wordmark">Open<span>Search</span></div>
+    <div class="topbar-meta">self-hosted · zero cost</div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="search-wrap">
+        <input
+          id="search-input"
+          class="search-input"
+          type="text"
+          placeholder="ask anything"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button id="search-btn" class="search-btn">Search</button>
+      </div>
+
+      <div class="intent-row">
+        <span class="intent-label">intent</span>
+        <button class="intent-pill active" data-intent="">auto</button>
+        <button class="intent-pill" data-intent="research">research</button>
+        <button class="intent-pill" data-intent="factual">factual</button>
+        <button class="intent-pill" data-intent="code">code</button>
+        <button class="intent-pill" data-intent="news">news</button>
+        <button class="intent-pill" data-intent="commercial">commercial</button>
+        <button class="intent-pill" data-intent="general">general</button>
+      </div>
+    </section>
+
+    <section class="results-section">
+      <div id="results-container"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

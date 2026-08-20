@@ -1,0 +1,328 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .shell {
+    background: #000;
+    font-family: 'Inter', sans-serif;
+    min-height: 640px;
+    color: #EDE8DC;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 36px;
+    border-bottom: 0.5px solid #141414;
+  }
+
+  .wordmark {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #EDE8DC;
+  }
+
+  .wordmark span { color: #B8F53C; }
+
+  .topbar-right {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #7DD4FC;
+    letter-spacing: 0.06em;
+    opacity: 0.4;
+  }
+
+  .hero {
+    padding: 56px 36px 36px;
+    max-width: 660px;
+    margin: 0 auto;
+  }
+
+  .search-wrap {
+    display: flex;
+    border: 0.5px solid #1C1C1C;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #080808;
+    transition: border-color 0.15s;
+  }
+
+  .search-wrap:focus-within { border-color: #B8F53C; }
+
+  .search-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 16px 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: #EDE8DC;
+    caret-color: #B8F53C;
+  }
+
+  .search-input::placeholder { color: #1C1C1C; }
+
+  .search-btn {
+    background: #B8F53C;
+    border: none;
+    margin: 6px;
+    border-radius: 8px;
+    padding: 0 22px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #000;
+    transition: background 0.15s;
+  }
+
+  .search-btn:hover { background: #CAF760; }
+
+  .intent-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .intent-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: #7DD4FC;
+    text-transform: uppercase;
+    margin-right: 2px;
+    opacity: 0.4;
+  }
+
+  .intent-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border: 0.5px solid #1C1C1C;
+    border-radius: 20px;
+    color: #2E2E2E;
+    cursor: pointer;
+    background: transparent;
+    transition: all 0.1s;
+  }
+
+  .intent-pill:hover { border-color: #B8F53C; color: #B8F53C; }
+  .intent-pill.active { border-color: #B8F53C; color: #B8F53C; background: #0A0D00; }
+
+  .results-section {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 0 36px 64px;
+  }
+
+  .results-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 0 16px;
+    border-bottom: 0.5px solid #0D0D0D;
+    margin-bottom: 4px;
+  }
+
+  .results-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #2A2A2A;
+    letter-spacing: 0.05em;
+  }
+
+  .results-count strong { color: #B8F53C; font-weight: 500; }
+
+  .latency {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #7DD4FC;
+    letter-spacing: 0.05em;
+    opacity: 0.35;
+  }
+
+  .result {
+    padding: 22px 0;
+    border-bottom: 0.5px solid #0A0A0A;
+  }
+
+  .result:last-child { border-bottom: none; }
+
+  .result-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+  }
+
+  .result-domain {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #B8F53C;
+    letter-spacing: 0.04em;
+  }
+
+  .result-engines {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #7DD4FC;
+    opacity: 0.3;
+  }
+
+  .result-score {
+    width: 32px;
+    height: 2px;
+    background: #111;
+    border-radius: 99px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .result-score-fill {
+    position: absolute;
+    left: 0; top: 0;
+    height: 100%;
+    background: #B8F53C;
+    border-radius: 99px;
+  }
+
+  .result-url {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #1A1A1A;
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .result-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: #C8C0AE;
+    margin-bottom: 8px;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: color 0.1s;
+  }
+
+  .result-title:hover { color: #EDE8DC; }
+
+  .result-snippet {
+    font-size: 13px;
+    color: #2E2E2E;
+    line-height: 1.8;
+    margin-bottom: 12px;
+  }
+
+  .content-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #7DD4FC;
+    border: 0.5px solid #0D1A1F;
+    border-radius: 20px;
+    padding: 3px 10px;
+    letter-spacing: 0.04em;
+    opacity: 0.6;
+  }
+
+  .content-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #7DD4FC;
+  }
+</style>
+
+<div class="shell">
+  <div class="topbar">
+    <div class="wordmark">Open<span>Search</span></div>
+    <div class="topbar-right">self-hosted · zero cost</div>
+  </div>
+
+  <div class="hero">
+    <div class="search-wrap">
+      <input class="search-input" type="text" value="how does Redis persistence work" placeholder="ask anything" />
+      <button class="search-btn">Search</button>
+    </div>
+    <div class="intent-row">
+      <span class="intent-label">intent</span>
+      <button class="intent-pill">auto</button>
+      <button class="intent-pill active">research</button>
+      <button class="intent-pill">factual</button>
+      <button class="intent-pill">code</button>
+      <button class="intent-pill">news</button>
+      <button class="intent-pill">commercial</button>
+      <button class="intent-pill">general</button>
+    </div>
+  </div>
+
+  <div class="results-section">
+    <div class="results-bar">
+      <div class="results-count"><strong>8</strong> results · intent: research · content extracted</div>
+      <div class="latency">312ms</div>
+    </div>
+
+    <div class="result">
+      <div class="result-top">
+        <span class="result-domain">redis.io</span>
+        <span class="result-engines">brave · ddg</span>
+        <div class="result-score"><div class="result-score-fill" style="width:88%"></div></div>
+      </div>
+      <div class="result-url">https://redis.io/docs/management/persistence</div>
+      <div class="result-title">Redis persistence: RDB and AOF</div>
+      <div class="result-snippet">Redis supports two primary persistence mechanisms. RDB snapshots the dataset at specified intervals while AOF logs every write operation. Each carries distinct durability and performance tradeoffs depending on your use case.</div>
+      <div class="content-badge"><span class="content-dot"></span>full content · 2,840 tokens</div>
+    </div>
+
+    <div class="result">
+      <div class="result-top">
+        <span class="result-domain">stackoverflow.com</span>
+        <span class="result-engines">brave</span>
+        <div class="result-score"><div class="result-score-fill" style="width:72%"></div></div>
+      </div>
+      <div class="result-url">https://stackoverflow.com/questions/5920595/redis-rdb-vs-aof</div>
+      <div class="result-title">RDB vs AOF — when to use each</div>
+      <div class="result-snippet">RDB gives compact snapshots and faster restarts. AOF offers better durability with fsync-per-second or fsync-always modes. Most production deployments run both simultaneously for maximum safety.</div>
+      <div class="content-badge"><span class="content-dot"></span>full content · 1,420 tokens</div>
+    </div>
+
+    <div class="result">
+      <div class="result-top">
+        <span class="result-domain">github.com</span>
+        <span class="result-engines">ddg</span>
+        <div class="result-score"><div class="result-score-fill" style="width:58%"></div></div>
+      </div>
+      <div class="result-url">https://github.com/redis/redis/blob/unstable/src/persistence.c</div>
+      <div class="result-title">redis/redis — persistence.c</div>
+      <div class="result-snippet">The persistence subsystem coordinates both RDB and AOF writers. The fork-based RDB writer operates without blocking the main event loop using copy-on-write semantics.</div>
+      <div class="content-badge"><span class="content-dot"></span>full content · 980 tokens</div>
+    </div>
+
+    <div class="result">
+      <div class="result-top">
+        <span class="result-domain">martin.kleppmann.com</span>
+        <span class="result-engines">brave</span>
+        <div class="result-score"><div class="result-score-fill" style="width:44%"></div></div>
+      </div>
+      <div class="result-url">https://martin.kleppmann.com/2020/04/storage-engines</div>
+      <div class="result-title">Designing data-intensive applications — storage engines</div>
+      <div class="result-snippet">Log-structured storage approaches trade random writes for sequential ones. Redis AOF embodies this design: append-only writes are fast, compaction happens asynchronously.</div>
+    </div>
+  </div>
+</div>
