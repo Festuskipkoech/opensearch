@@ -47,7 +47,7 @@ Zero per-query cost. Fully self-hosted. One command to run.
 Requirements: Docker and Docker Compose.
 
 ```bash
-git clone https://github.com/yourname/opensearch
+git clone https://github.com/Festuskipkoech/opensearch
 cd opensearch
 docker compose up
 ```
